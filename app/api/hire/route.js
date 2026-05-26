@@ -7,26 +7,33 @@ export async function POST(request) {
     const body = await request.json()
     const { name, email, phone, date, guests, message } = body
 
-    // 1 — Save to Supabase
+    console.log('Hire enquiry received:', { name, email })
+    console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
+
+    // Save to Supabase (optional - skip if not configured)
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      )
-      await supabase.from('hire_enquiries').insert([{
-        name,
-        email,
-        phone,
-        event_date: date || null,
-        guests: guests || null,
-        message,
-      }])
+      try {
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        )
+        await supabase.from('hire_enquiries').insert([{
+          name, email, phone,
+          event_date: date || null,
+          guests: guests || null,
+          message,
+        }])
+        console.log('Saved to Supabase')
+      } catch (dbError) {
+        console.log('Supabase error (non-fatal):', dbError.message)
+      }
     }
 
-    // 2 — Send email via Resend
-    await resend.emails.send({
-      from: 'Claud W Dennis <noreply@claudwdennis.com>',
+    // Send email via Resend
+    console.log('Sending email via Resend...')
+    const emailResult = await resend.emails.send({
+      from: 'Claud W Dennis <onboarding@resend.dev>',
       to: ['Claudwdennisbusiness@gmail.com'],
       replyTo: email,
       subject: `New Private Hire Enquiry — ${name}`,
@@ -39,7 +46,6 @@ export async function POST(request) {
           </div>
 
           <div style="padding: 0 40px;">
-
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
               <tr>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-family: monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #7A5C3A; width: 140px;">Name</td>
@@ -49,18 +55,15 @@ export async function POST(request) {
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-family: monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #7A5C3A;">Email</td>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-size: 15px;"><a href="mailto:${email}" style="color: #C17F3A;">${email}</a></td>
               </tr>
-              ${phone ? `
-              <tr>
+              ${phone ? `<tr>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-family: monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #7A5C3A;">Phone</td>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-size: 15px;">${phone}</td>
               </tr>` : ''}
-              ${date ? `
-              <tr>
+              ${date ? `<tr>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-family: monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #7A5C3A;">Preferred Date</td>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-size: 15px;">${new Date(date).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
               </tr>` : ''}
-              ${guests ? `
-              <tr>
+              ${guests ? `<tr>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-family: monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #7A5C3A;">Guests</td>
                 <td style="padding: 12px 0; border-bottom: 1px solid #EDE3CC; font-size: 15px;">${guests}</td>
               </tr>` : ''}
@@ -74,16 +77,21 @@ export async function POST(request) {
             <p style="font-size: 13px; color: #7A5C3A; border-top: 1px solid #EDE3CC; padding-top: 20px; margin-bottom: 40px;">
               Reply directly to this email to respond to ${name}.
             </p>
-
           </div>
         </div>
       `,
     })
 
+    console.log('Email result:', JSON.stringify(emailResult))
+
+    if (emailResult.error) {
+      throw new Error(emailResult.error.message)
+    }
+
     return Response.json({ success: true })
 
   } catch (error) {
-    console.error('Hire enquiry error:', error)
+    console.error('Hire enquiry error:', error.message)
     return Response.json({ success: false, error: error.message }, { status: 500 })
   }
 }
