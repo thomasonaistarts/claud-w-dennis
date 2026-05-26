@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
 
 export default function HireForm() {
   const [form, setForm] = useState({
@@ -11,7 +10,7 @@ export default function HireForm() {
     guests: '',
     message: '',
   })
-  const [status, setStatus] = useState('idle') // idle | loading | success | error
+  const [status, setStatus] = useState('idle')
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -21,23 +20,31 @@ export default function HireForm() {
     e.preventDefault()
     setStatus('loading')
 
-    const { error } = await supabase.from('hire_enquiries').insert([
-      {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        event_date: form.date || null,
-        guests: form.guests || null,
-        message: form.message,
-      },
-    ])
+    try {
+      const { supabase } = await import('../lib/supabase')
 
-    if (error) {
-      console.error(error)
-      setStatus('error')
-    } else {
+      if (!supabase) {
+        throw new Error('Supabase not configured')
+      }
+
+      const { error } = await supabase.from('hire_enquiries').insert([
+        {
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          event_date: form.date || null,
+          guests: form.guests || null,
+          message: form.message,
+        },
+      ])
+
+      if (error) throw error
+
       setStatus('success')
       setForm({ name: '', email: '', phone: '', date: '', guests: '', message: '' })
+    } catch (err) {
+      console.error(err)
+      setStatus('error')
     }
   }
 
@@ -63,25 +70,15 @@ export default function HireForm() {
             <div className="form-group">
               <label htmlFor="name">Name *</label>
               <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Your name"
+                id="name" name="name" type="text" required
+                value={form.name} onChange={handleChange} placeholder="Your name"
               />
             </div>
             <div className="form-group">
               <label htmlFor="email">Email *</label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={form.email}
-                onChange={handleChange}
-                placeholder="your@email.com"
+                id="email" name="email" type="email" required
+                value={form.email} onChange={handleChange} placeholder="your@email.com"
               />
             </div>
           </div>
@@ -90,22 +87,15 @@ export default function HireForm() {
             <div className="form-group">
               <label htmlFor="phone">Phone</label>
               <input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={form.phone}
-                onChange={handleChange}
-                placeholder="+44 ..."
+                id="phone" name="phone" type="tel"
+                value={form.phone} onChange={handleChange} placeholder="+44 ..."
               />
             </div>
             <div className="form-group">
               <label htmlFor="date">Preferred Date</label>
               <input
-                id="date"
-                name="date"
-                type="date"
-                value={form.date}
-                onChange={handleChange}
+                id="date" name="date" type="date"
+                value={form.date} onChange={handleChange}
               />
             </div>
           </div>
@@ -124,11 +114,8 @@ export default function HireForm() {
           <div className="form-group">
             <label htmlFor="message">Tell us about your event *</label>
             <textarea
-              id="message"
-              name="message"
-              required
-              value={form.message}
-              onChange={handleChange}
+              id="message" name="message" required
+              value={form.message} onChange={handleChange}
               placeholder="Type of event, any special requirements..."
             />
           </div>
