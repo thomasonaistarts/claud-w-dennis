@@ -21,24 +21,15 @@ export default function HireForm() {
     setStatus('loading')
 
     try {
-      const { supabase } = await import('../lib/supabase')
+      const res = await fetch('/api/hire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
 
-      if (!supabase) {
-        throw new Error('Supabase not configured')
-      }
+      const data = await res.json()
 
-      const { error } = await supabase.from('hire_enquiries').insert([
-        {
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          event_date: form.date || null,
-          guests: form.guests || null,
-          message: form.message,
-        },
-      ])
-
-      if (error) throw error
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed')
 
       setStatus('success')
       setForm({ name: '', email: '', phone: '', date: '', guests: '', message: '' })
@@ -60,7 +51,7 @@ export default function HireForm() {
 
       {status === 'error' && (
         <div className="form-error">
-          Something went wrong. Please try again or email us directly.
+          Something went wrong. Please try again or email us directly at hello@claudwdennis.com
         </div>
       )}
 
