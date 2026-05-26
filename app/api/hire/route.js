@@ -33,7 +33,7 @@ export async function POST(request) {
     // Send email via Resend
     console.log('Sending email via Resend...')
     const emailResult = await resend.emails.send({
-      from: 'Claud W Dennis <onboarding@resend.dev>',
+      from: 'Claud W Dennis <noreply@claudwdennis.com>',
       to: ['Claudwdennisbusiness@gmail.com'],
       replyTo: email,
       subject: `New Private Hire Enquiry — ${name}`,
